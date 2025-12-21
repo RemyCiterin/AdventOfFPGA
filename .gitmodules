@@ -1,0 +1,3 @@
+[submodule "DOoOM"]
+	path = DOoOM
+	url = git@github.com:RemyCiterin/DOoOM.git
