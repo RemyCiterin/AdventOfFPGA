@@ -52,13 +52,10 @@ BUILD_FLAGS = -show-schedule -sched-dot -bdir $(BUILD) -vdir $(RTL) \
 compile:
 	bsc $(BUILD_FLAGS) $(BSC_FLAGS) -cpp +RTS -K128M -RTS \
 		-p $(PACKAGES) -verilog -u -g $(BUILD_MODULE) $(TOP)
-#	bsc \
-#		-verilog \
-#		-vdir $(RTL) -bdir $(BUILD) -info-dir $(BUILD) \
-#		-no-warn-action-shadowing -check-assert \
-#		-keep-fires -aggressive-conditions -show-schedule -sched-dot \
-#		-cpp +RTS -K128M -RTS  -show-range-conflict \
-#		-p $(PACKAGES) -g $(BUILD_MODULE) -u $(TOP)
+
+run_dooom:
+	elf_to_hex/elf_to_hex soft/zig-out/bin/kernel.elf Mem.hex
+	./DOoOM/bsim/bsim -m 1000000000
 
 .PHONY: bsim
 bsim:

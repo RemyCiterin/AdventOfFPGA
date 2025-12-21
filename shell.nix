@@ -9,6 +9,7 @@ pkgs.mkShell {
     pkgs.openfpgaloader
 
     pkgs.yosys
+    pkgs.zig_0_12
     pkgs.nextpnrWithGui
     pkgs.trellis
     pkgs.graphviz

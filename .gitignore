@@ -1,3 +1,6 @@
 build
 bsim
 rtl
+soft/zig-cache
+soft/zig-out
+elf_to_hex/elf_to_hex
