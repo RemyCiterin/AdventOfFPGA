@@ -1,4 +1,9 @@
 
+# Day 1
+
+For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
+write the solution using sequence of actions, `if-then-else` and `while` blocks.
+
 # Day 11
 
 For this problem I foccused on the first part as the second part is just repeating the first one
@@ -160,3 +165,16 @@ while (!stack.empty) seq
   endaction
 endseq
 ```
+
+# Performances
+
+For all the problems I compared the performance of my solution with an implementation in Zig
+(Zig-0.12) running on my own out-of-order CPU that I made a year ago. Doing so it is possible to
+see the improvment of the direct implementation in Bluespec against a standard implementation in a
+compiled programming language (Zig in my case).
+
+|        | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
+|--------|------------------|---------------|----------------------|------------|
+| Day 1  | 35.9K            | 4.94M         | 4.06M                | 138x       |
+| Day 11 | 47.9K            | 62.2M         | 52.0M                | 1086x      |
+

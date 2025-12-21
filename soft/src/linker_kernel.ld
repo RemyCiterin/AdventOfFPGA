@@ -9,8 +9,7 @@ SECTIONS
    * ensure that _start 0x80010000,
    * where qemu's -kernel jumps.
    */
-  . = 0x80000000;
-  . = ALIGN(4K);
+  . = 0x80010000;
 
   .text : {
     *(.text.init)

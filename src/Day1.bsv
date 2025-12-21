@@ -31,6 +31,9 @@ module mkSolveDay1#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
     $finish;
   endrule
 
+  Reg#(Bit#(32)) cycle <- mkReg(0);
+  rule incr_cycle; cycle <= cycle+1; endrule
+
   // I used a the Bluesec DSL for finite state machines for parsing, and also directly to solve the
   // problem because it can be done in one linear scan of the inputs
   let stmt = seq
@@ -78,8 +81,8 @@ module mkSolveDay1#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
       action
         count <= current_pos == 0 ? count + 1 : count;
         $display(
-          "incr: %d current pos: %d zeros count: ",
-          is_left ? -num : num, current_pos, current_pos == 0 ? count + 1 : count
+          "incr: %d current pos: %d zeros count: %d cycle: %d",
+          is_left ? -num : num, current_pos, current_pos == 0 ? count + 1 : count, cycle
         );
       endaction
 

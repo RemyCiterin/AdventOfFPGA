@@ -7,6 +7,9 @@ const Allocator = std.mem.Allocator;
 const UART = @import("print.zig");
 const print = UART.putString;
 
+const Day1 = @import("day1.zig");
+const Day11 = @import("day11.zig");
+
 const RV = @import("riscv.zig");
 
 pub const std_options = .{
@@ -68,10 +71,6 @@ pub export fn kernel_main() align(16) callconv(.C) void {
     const logger = std.log.scoped(.kernel);
     logger.info("=== Start DOoOM ===", .{});
 
-    logger.info(
-        \\Ethernet test started!
-    , .{});
-
     const kalloc_len = 28 * 1024 * 1024;
     var kernel_fba = std.heap.FixedBufferAllocator.init(kalloc_buffer[0..kalloc_len]);
     kalloc = kernel_fba.allocator();
@@ -80,12 +79,9 @@ pub export fn kernel_main() align(16) callconv(.C) void {
         \\Kernel allocator initialized!
     , .{});
 
-    while (true) {
-        const char = UART.getChar();
-        logger.info(
-            \\Receive input: {}
-        , .{char});
-    }
+    Day11.solveDay11(kalloc) catch {
+        @panic("error while solving day1");
+    };
 
-    @panic("unreachable");
+    hang();
 }

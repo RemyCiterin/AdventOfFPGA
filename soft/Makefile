@@ -1,2 +1,2 @@
 build:
-	zig build -Dopitmize=ReleaseSmall
+	zig build -Doptimize=ReleaseFast

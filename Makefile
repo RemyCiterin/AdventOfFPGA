@@ -8,6 +8,8 @@ TOP = src/Soc.bsv
 BSIM_MODULE = mkSOC_SIM
 BUILD_MODULE = mkSOC
 
+INPUT_FILE = day1.txt
+
 LIB = \
 			$(BLUESPECDIR)/Verilog/SizedFIFO.v \
 			$(BLUESPECDIR)/Verilog/FIFO1.v \
@@ -23,8 +25,6 @@ LIB = \
 			$(BLUESPECDIR)/Verilog/RegFile.v \
 			$(BLUESPECDIR)/Verilog/RegFileLoad.v \
 			src/Top.v
-			#src/sdram_axi.v \
-			#src/sd_card.v
 
 DOT_FILES = $(shell ls ./build/*_combined_full.dot) \
 	$(shell ls ./build/*_conflict.dot)
@@ -53,16 +53,20 @@ compile:
 	bsc $(BUILD_FLAGS) $(BSC_FLAGS) -cpp +RTS -K128M -RTS \
 		-p $(PACKAGES) -verilog -u -g $(BUILD_MODULE) $(TOP)
 
+dooom:
+	make -C DOoOM compile_sim
+
 run_dooom:
+	make -C soft build
 	elf_to_hex/elf_to_hex soft/zig-out/bin/kernel.elf Mem.hex
-	./DOoOM/bsim/bsim -m 1000000000
+	cat $(INPUT_FILE) | ./DOoOM/bsim/bsim -m 1000000000
 
 .PHONY: bsim
 bsim:
 	bsc $(BSC_FLAGS) $(BSIM_FLAGS) -p $(PACKAGES) -sim -u -g $(BSIM_MODULE) $(TOP)
 	bsc $(BSC_FLAGS) $(BSIM_FLAGS) -sim -e $(BSIM_MODULE) -o \
 		$(BSIM)/bsim $(BSIM)/*.ba
-	./bsim/bsim -m 1000000000
+	cat $(INPUT_FILE) | ./bsim/bsim -m 1000000000
 
 .PHONY: yosys
 yosys:
