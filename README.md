@@ -18,7 +18,8 @@ typedef struct {
 } SolverInput deriving(Bits);
 ```
 
-This module use a variable `counter` to iterate over all the combinations of buttons, and a rule
+This module use a variable `counter` to iterate over all the combinations of buttons, and a rule to
+perform this iteration:
 
 ```bsv
   rule step if (valid && counter != 1 << num_patterns);
@@ -44,7 +45,7 @@ doing so it is possible to use multiple parallel solvers to minimize the solving
 
 # Day 11
 
-For this problem I foccused on the first part as the second part is just repeating the first one
+For this problem I focused on the first part, as the second part is just repeating the first one
 four times, then use the formula:
 
 ```
@@ -53,12 +54,12 @@ num_paths("svr", "out", constraint=["dac", "fft"]) =
     num_paths("svr", "dac") * num_paths("dac", "fft") * num_paths("fft", "out")
 ```
 
-## Algorithmic improvments
+## Algorithmic improvements
 
 Since it was easy to make small mistakes in the algorithm, I started by writing a prototype in Python, and I took the opportunity to measure the performance of my different ideas.
 
 My first idea was to use a simple recursive search over the nodes, like so
-(assuming the abscence of cycles):
+(assuming the absence of cycles):
 
 ```python
 def explore(node):
@@ -73,10 +74,10 @@ def explore(node):
 explore("you")
 ```
 
-This approach works great as the number of inputs of the problem is quite small by I wanted
-to find a better solution to minimize the number of cycles I needed. in particular with this
-approach the complexity is superior to the sum of the length of all the paths from "you" to "out",
-this can be problematic in presence of a lot a diamond patterns:
+This approach works great as the number of inputs of the problem is quite small but I wanted
+to find a better solution to minimize the number of cycles I needed. In particular with this
+approach, the complexity is superior to the sum of the length of all the paths from "you" to "out",
+this can be problematic in the presence of a lot of diamond patterns:
 
 ```
       aaa      ddd
@@ -119,17 +120,13 @@ print("The number of paths from \"you\" to \"out\" is ", counters["out"])
 
 This approach has a the complexity is `O(|E| + |V|)` (a **LOT** better than the previous algorithm).
 Now the challenge was to implement the parsing and the search algorithm in hardware. I tested the
-algorithm and I found that the first approach used `1497` recursive calls while the second used only
+algorithm, and I found that the first approach used `1497` recursive calls, while the second used only
 `425`, plus `212` loop iterations in the dynamic programming part of the algorithm.
-For part 2 the difference is even greater, the answer is calculated instantly with dynamic programming whereas the naive algorithm is extremely long.
+For part 2 the difference is even greater; the answer is calculated instantly with dynamic programming, whereas the naive algorithm is extremely long.
 
 ## Hardware implementation
 
-The hardest part of the implementation was the topological sort because the parsing and dynamic
-programming parts where relatively easy. For the sort I started by rewriting the algorithm to a form
-that manipulate contiguous arrays of nodes insteads of sigle node. This is because it simplify the
-content of the call stack that I will represent explicitly.
-
+The hardest part of the implementation was the topological sort because the parsing and dynamic programming parts were relatively easy. For the sort, I started by rewriting the algorithm to a form that manipulates contiguous arrays of nodes instead of single nodes. This is because it simplifies the content of the call stack that I will represent explicitly.
 ```ocaml
 let topo parent = function
     | [] ->
@@ -206,9 +203,9 @@ endseq
 
 # Performances
 
-For all the problems I compared the performance of my solution with an implementation in Zig
-(Zig-0.12) running on my own out-of-order CPU that I made a year ago. Doing so it is possible to
-see the improvment of the direct implementation in Bluespec against a standard implementation in a
+For all the problems, I compared the performance of my solution with an implementation in Zig
+(Zig-0.12) running on my own out-of-order CPU that I made a year ago. Doing so, it is possible to
+see the improvement of the direct implementation in Bluespec against a standard implementation in a
 compiled programming language (Zig in my case).
 
 |                 | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
