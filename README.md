@@ -4,6 +4,44 @@
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
+# Day 10
+
+My way of solving this problem is by doing a brute-force search over the buttons to find the
+solution. So I implemented a module of solver with the interface `Server#(SolverInput, Bit#(32))`
+with
+
+```bsv
+typedef struct {
+  BitVec target;                // Light target pattern
+  Vector#(12, BitVec) patterns; // Pattern of each button
+  Bit#(32) num_patterns;        // Number of buttons
+} SolverInput deriving(Bits);
+```
+
+This module use a variable `counter` to iterate over all the combinations of buttons, and a rule
+
+```bsv
+  rule step if (valid && counter != 1 << num_patterns);
+    // The pattern corresponding to the current solution counter
+    BitVec ret = 0;
+
+    // Number of button pushs of the current solution counter
+    Bit#(32) count = 0;
+    for (Integer i=0; i < 12; i = i + 1) begin
+      if (counter[i] == 1) begin
+        ret = ret ^ patterns[i];
+        count = count + 1;
+      end
+    end
+
+    if (ret == target && count < best_solution) best_solution <= count;
+
+    counter <= counter + 1;
+  endrule
+```
+
+doing so it is possible to use multiple parallel solvers to minimize the solving time.
+
 # Day 11
 
 For this problem I foccused on the first part as the second part is just repeating the first one
@@ -173,8 +211,12 @@ For all the problems I compared the performance of my solution with an implement
 see the improvment of the direct implementation in Bluespec against a standard implementation in a
 compiled programming language (Zig in my case).
 
-|        | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
-|--------|------------------|---------------|----------------------|------------|
-| Day 1  | 35.9K            | 4.94M         | 4.06M                | 138x       |
-| Day 11 | 47.9K            | 62.2M         | 52.0M                | 1086x      |
+|                 | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
+|-----------------|------------------|---------------|----------------------|------------|
+| Day 1 (part 1)  | 35.9K            | 4.94M         | 4.06M                | 138x       |
+| Day 10 (part 1) | 37.1K            |               |                      |            |
+| Day 11 (part 1) | 47.9K            | 62.2M         | 52.0M                | 1086x      |
 
+These tests are cycle-accurate except for the UART, which responds in one cycle.
+Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting for it.
+So I disabled it to get results that were representative of the time spent doing calculations.

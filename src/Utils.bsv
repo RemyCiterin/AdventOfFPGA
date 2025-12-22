@@ -14,6 +14,35 @@ function Bool asciiIsSpace(Ascii a) =
   a == charToAscii("\t") ||
   a == charToAscii("\n");
 
+// Return an integer and the first input that is not a digit
+module mkIntegerParser#(Get#(Ascii) receive) (Server#(void, Tuple2#(Ascii, Bit#(32))));
+  Fifo#(2, Tuple2#(Ascii, Bit#(32))) outputQ <- mkFifo;
+  Fifo#(2, void) inputQ <- mkFifo;
+
+  Reg#(Bit#(32)) acc <- mkReg(0);
+  Reg#(Bool) valid <- mkReg(False);
+
+  rule start if (!valid);
+    let _ <- toGet(inputQ).get;
+    valid <= True;
+    acc <= 0;
+  endrule
+
+  rule step if (valid);
+    Ascii ascii <- receive.get();
+
+    if (ascii >= charToAscii("0") && ascii <= charToAscii("9")) begin
+      acc <= zeroExtend(unpack(ascii - charToAscii("0"))) + 10 * acc;
+    end else begin
+      outputQ.enq(tuple2(ascii, acc));
+      valid <= False;
+    end
+  endrule
+
+  interface request = toPut(inputQ);
+  interface response = toGet(outputQ);
+endmodule
+
 module mkStringPrinter#(String str, Put#(Ascii) transmit) (Server#(void,void));
   Reg#(Maybe#(Bit#(16))) pointer <- mkReg(Invalid);
   let chars = stringToCharList(str);

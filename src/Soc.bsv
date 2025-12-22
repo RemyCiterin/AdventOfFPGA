@@ -19,6 +19,7 @@ import StmtFSM :: *;
 import Utils::*;
 
 import Day1::*;
+import Day10::*;
 import Day11::*;
 
 interface Soc_Ifc;
@@ -38,7 +39,7 @@ module mkSOC(Soc_Ifc);
   RxUART rx_uart <- mkRxUART(217);
   Reg#(Bit#(8)) led_state <- mkReg(0);
 
-  mkSolveDay11(
+  mkSolveDay10(
     interface Put;
       method Action put(Ascii x);
         tx_uart.put(x);
@@ -60,7 +61,7 @@ endmodule
 
 (* synthesize *)
 module mkSOC_SIM(Empty);
-  mkSolveDay11(
+  mkSolveDay10(
     interface Put;
       method Action put(Ascii x);
         $write("%c", x);
