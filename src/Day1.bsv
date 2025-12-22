@@ -10,7 +10,7 @@ typedef Int#(16) Pos;
 
 module mkSolveDay1#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   Reg#(Pos) current_pos <- mkReg(50);
-  Reg#(Bit#(16)) count <- mkReg(0);
+  Reg#(Bit#(32)) count <- mkReg(0);
 
   Reg#(Bool) is_left <- mkReg(?);
   Reg#(Bool) is_blank <- mkReg(True);
@@ -66,7 +66,10 @@ module mkSolveDay1#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
       endaction
 
       // Update the state of the dial, and the conter of zeros
-      current_pos <= is_left ? current_pos - num : current_pos + num;
+      action
+        let new_pos = is_left ? current_pos - num : current_pos + num;
+        current_pos <= new_pos;
+      endaction
 
       // Compute `current_pos % 100` (high complexity but works well for small numbers)
       while (current_pos >= 100) action
@@ -77,12 +80,13 @@ module mkSolveDay1#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
         current_pos <= current_pos + 100;
       endaction
 
+      count <= current_pos == 0 ? count + 1 : count;
+
       // Update the counter and display the current result
       action
-        count <= current_pos == 0 ? count + 1 : count;
         $display(
           "incr: %d current pos: %d zeros count: %d cycle: %d",
-          is_left ? -num : num, current_pos, current_pos == 0 ? count + 1 : count, cycle
+          is_left ? -num : num, current_pos, count, cycle
         );
       endaction
 

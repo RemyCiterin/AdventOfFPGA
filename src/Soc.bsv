@@ -61,7 +61,7 @@ endmodule
 
 (* synthesize *)
 module mkSOC_SIM(Empty);
-  mkSolveDay10(
+  mkSolveDay1(
     interface Put;
       method Action put(Ascii x);
         $write("%c", x);

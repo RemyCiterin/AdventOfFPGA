@@ -4,7 +4,7 @@
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
-# Day 10
+# Day 10 (part 1)
 
 My way of solving this problem is by doing a brute-force search over the buttons to find the
 solution. So I implemented a module of solver with the interface `Server#(SolverInput, Bit#(32))`
@@ -43,6 +43,8 @@ perform this iteration:
 
 doing so it is possible to use multiple parallel solvers to minimize the solving time.
 
+[][1]
+
 # Day 11
 
 For this problem I focused on the first part, as the second part is just repeating the first one
@@ -56,7 +58,8 @@ num_paths("svr", "out", constraint=["dac", "fft"]) =
 
 ## Algorithmic improvements
 
-Since it was easy to make small mistakes in the algorithm, I started by writing a prototype in Python, and I took the opportunity to measure the performance of my different ideas.
+Since it was easy to make small mistakes in the algorithm, I started by writing a prototype in
+Python, and I took the opportunity to measure the performance of my different ideas.
 
 My first idea was to use a simple recursive search over the nodes, like so
 (assuming the absence of cycles):
@@ -120,13 +123,17 @@ print("The number of paths from \"you\" to \"out\" is ", counters["out"])
 
 This approach has a the complexity is `O(|E| + |V|)` (a **LOT** better than the previous algorithm).
 Now the challenge was to implement the parsing and the search algorithm in hardware. I tested the
-algorithm, and I found that the first approach used `1497` recursive calls, while the second used only
-`425`, plus `212` loop iterations in the dynamic programming part of the algorithm.
-For part 2 the difference is even greater; the answer is calculated instantly with dynamic programming, whereas the naive algorithm is extremely long.
+algorithm, and I found that the first approach used `1497` recursive calls, while the second used
+only `425`, plus `212` loop iterations in the dynamic programming part of the algorithm.
+For part 2 the difference is even greater; the answer is calculated instantly with dynamic
+programming, whereas the naive algorithm is extremely long.
 
 ## Hardware implementation
 
-The hardest part of the implementation was the topological sort because the parsing and dynamic programming parts were relatively easy. For the sort, I started by rewriting the algorithm to a form that manipulates contiguous arrays of nodes instead of single nodes. This is because it simplifies the content of the call stack that I will represent explicitly.
+The hardest part of the implementation was the topological sort because the parsing and dynamic
+programming parts were relatively easy. For the sort, I started by rewriting the algorithm to a form
+that manipulates contiguous arrays of nodes instead of single nodes. This is because it simplifies
+the content of the call stack that I will represent explicitly.
 ```ocaml
 let topo parent = function
     | [] ->
@@ -160,60 +167,69 @@ while not (List.is_empty !stack) do
 done
 ```
 
-It is therefore now very straightforward to transform this algorithm into Bluespec using the DSL for state machines.
+It is therefore now relatively straightforward to transform this algorithm into Bluespec using the
+DSL for state machines.
 
-```verilog
-// Read the set of edges of the source node
-nodes.put(False, source, ?);
+```bsv
+seq
+  // Read the set of edges of the source node
+  nodes.put(False, source, ?);
 
-// Initialize the stack with the source node, it's first successor, and it's number of successors
-stack.push(tuple3(source, nodes.read.index, nodes.read.length));
+  // Initialize the stack with the source node, it's first successor, and it's number of successors
+  stack.push(tuple3(source, nodes.read.index, nodes.read.length));
 
-while (!stack.empty) seq
-  // Read the first element of the stack
-  action
-    match {.p, .i, .l} = stack.top;
-    edges.put(False, i, ?);
-    parent <= p;
-    length <= l;
-    index <= i;
-    stack.pop;
-  endaction
-
-  if (length > 0) seq
+  while (!stack.empty) seq
+    // Read the first element of the stack
     action
-      // Push parent to the stack first
-      stack.push(tuple3(parent, index+1, length-1));
-
-      // Read if we already visited `edges.read` (`x` in the ocaml algorithm)
-      visited.put(False, edges.read, ?);
-      nodes.put(False, edges.read, ?);
+      match {.p, .i, .l} = stack.top;
+      edges.put(False, i, ?);
+      parent <= p;
+      length <= l;
+      index <= i;
+      stack.pop;
     endaction
 
-    if (!visited.read) stack.push(tuple3(edges.read, nodes.read.index, nodes.read.length));
+    if (length > 0) seq
+      action
+        // Push parent to the stack first
+        stack.push(tuple3(parent, index+1, length-1));
 
-  endseq else action
-    // Mark `parent` as visited and add it to the output list
-    order.put(True, order_length, parent);
-    order_length <= order_length + 1;
-    visited.put(True, parent, True);
-  endaction
+        // Read if we already visited `edges.read` (`x` in the ocaml algorithm)
+        visited.put(False, edges.read, ?);
+        nodes.put(False, edges.read, ?);
+      endaction
+
+      if (!visited.read) stack.push(tuple3(edges.read, nodes.read.index, nodes.read.length));
+
+    endseq else action
+      // Mark `parent` as visited and add it to the output list
+      order.put(True, order_length, parent);
+      order_length <= order_length + 1;
+      visited.put(True, parent, True);
+    endaction
+  endseq
 endseq
 ```
 
 # Performances
 
 For all the problems, I compared the performance of my solution with an implementation in Zig
-(Zig-0.12) running on my own out-of-order CPU that I made a year ago. Doing so, it is possible to
-see the improvement of the direct implementation in Bluespec against a standard implementation in a
-compiled programming language (Zig in my case).
+(Zig-0.12) running on my own out-of-order RISC-V CPU that I made a year ago. Doing so, it is
+possible to see the improvement of the direct implementation in Bluespec against a more standard
+implementation in a compiled programming language. All the programs where compiled with
+`-Doptimize=ReleaseFast`.
 
 |                 | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
 |-----------------|------------------|---------------|----------------------|------------|
 | Day 1 (part 1)  | 35.9K            | 4.94M         | 4.06M                | 138x       |
-| Day 10 (part 1) | 37.1K            |               |                      |            |
-| Day 11 (part 1) | 47.9K            | 62.2M         | 52.0M                | 1086x      |
+| Day 10 (part 1) | 37.1K            | 21.1M         | 13.0M                | 569x       |
+| Day 11 (part 1) | 47.9K            | 62.2M         | 52.0M                | 1090x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
-Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting for it.
-So I disabled it to get results that were representative of the time spent doing calculations.
+Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting
+for it. So I disabled it to get results that were representative of the time spent doing
+calculations.
+
+Even though my CPU isn't as optimized as industrial CPUs (with superscalar execution, SIMD, etc.),
+the performance difference is still very impressive.
+
