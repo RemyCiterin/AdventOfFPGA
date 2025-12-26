@@ -19,6 +19,7 @@ import StmtFSM :: *;
 import Utils::*;
 
 import Day1::*;
+import Day9::*;
 import Day10::*;
 import Day11::*;
 
@@ -61,7 +62,7 @@ endmodule
 
 (* synthesize *)
 module mkSOC_SIM(Empty);
-  mkSolveDay1(
+  mkSolveDay9(
     interface Put;
       method Action put(Ascii x);
         $write("%c", x);

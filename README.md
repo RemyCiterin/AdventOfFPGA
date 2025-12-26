@@ -4,6 +4,17 @@
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
+# Day 9 (part 1 and 2)
+
+For this day I solved both parts using some kind of brute force algorithms. In the first part I just
+iterate over all the possible boxes and save the best area I found. And in the second part I
+additionally check if their is an intersection between the interior of the box and an edge.
+I also needed to check that the box it at the interior of the shape
+by testing the parity of the number of intersection between the vertical edges and a vertical rayon
+starting from top-left corner of the box. To speed-ub the algorithm I perform the search over the
+vertical and horizontal edges in parallel using the `par ... endpar` keywords from the
+finite-state-machines DSL in Bluespec.
+
 # Day 10 (part 1)
 
 My way of solving this problem is by doing a brute-force search over the buttons to find the
@@ -45,7 +56,7 @@ doing so it is possible to use multiple parallel solvers to minimize the solving
 
 [][1]
 
-# Day 11
+# Day 11 (part 1 and 2)
 
 For this problem I focused on the first part, as the second part is just repeating the first one
 four times, then use the formula:
@@ -219,11 +230,12 @@ possible to see the improvement of the direct implementation in Bluespec against
 implementation in a compiled programming language. All the programs where compiled with
 `-Doptimize=ReleaseFast`.
 
-|                 | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
-|-----------------|------------------|---------------|----------------------|------------|
-| Day 1 (part 1)  | 35.9K            | 4.94M         | 4.06M                | 138x       |
-| Day 10 (part 1) | 37.1K            | 21.1M         | 13.0M                | 569x       |
-| Day 11 (part 1) | 47.9K            | 62.2M         | 52.0M                | 1090x      |
+|                       | Bluespec version | OOO CPU cycle | OOO CPU instructions | Imrovement |
+|-----------------------|------------------|---------------|----------------------|------------|
+| Day 1 (part 1)        | 35.9K            | 4.94M         | 4.06M                | 138x       |
+| Day 9 (part 1 and 2)  | 6.41M            |               |                      |            |
+| Day 10 (part 1)       | 37.1K            | 21.1M         | 13.0M                | 569x       |
+| Day 11 (part 1)       | 47.9K            | 62.2M         | 52.0M                | 1090x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
 Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting

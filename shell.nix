@@ -16,6 +16,10 @@ pkgs.mkShell {
     pkgs.fujprog
 
     pkgs.SDL2
+
+    pkgs.python313
+    pkgs.python313Packages.matplotlib
+    pkgs.python313Packages.numpy
   ];
 
   shellHook = ''
