@@ -54,6 +54,18 @@ perform this iteration:
 
 doing so it is possible to use multiple parallel solvers to minimize the solving time.
 
+# Day 10 (part 2)
+
+The part II was a lot harder that the part I for me. Initially, I misread the instructions and
+thought the Joltages were minimum values per machine, not exact values. As a result, I wasted a lot
+of time trying to adapt the Simplex algorithm and branch-and-bounds/Gomory cuts to run on an FPGA.
+I was about to give up due to accuracy issues when I reread the instructions and realized my
+mistake. Ultimately, I used Gaussian reduction to partition the variables into two groups:
+- non-basic variables, which are unconstrained
+- and basic variables, which are constrained. Each basic variable can be obtained through an affine
+relationship on the non-basic variables.
+
+Then I performed a brute-force search on the non-basic variables.
 [][1]
 
 # Day 11 (part 1 and 2)
@@ -235,6 +247,7 @@ implementation in a compiled programming language. All the programs where compil
 | Day 1 (part 1)        | 35.9K           | 4.94M         | 4.06M                | 138x       |
 | Day 9 (part 1 and 2)  | 6.41M           |               |                      |            |
 | Day 10 (part 1)       | 37.1K           | 21.1M         | 13.0M                | 569x       |
+| Day 10 (part 2)       | 23.7M           |               |                      |            |
 | Day 11 (part 1)       | 47.9K           | 62.2M         | 52.0M                | 1090x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.

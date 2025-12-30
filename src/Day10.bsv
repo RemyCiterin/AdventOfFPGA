@@ -82,10 +82,11 @@ typedef enum {
   Idle,
   Rst,
   Busy,
-  Dump,
+  BruteForce,
   ComputeBounds,
   SearchNonZero,
-  MultiplyRows
+  MultiplyRows,
+  Output
 } JoltageSolverState deriving(Bits, FShow, Eq);
 
 interface JoltageSolver;
@@ -110,7 +111,8 @@ module mkJoltageSolver(JoltageSolver);
   Vector#(15, Reg#(Maybe#(Machine))) basics <- replicateM(mkReg(Invalid));
   Button cnstr = 15;
 
-  Reg#(Button) num_buttons <- mkReg(0);
+  Reg#(Button) max_buttons <- mkReg(0);
+  Reg#(Button) max_machines <- mkReg(0);
 
   Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)) gcdServer <- mkDivGcd;
   Server#(Tuple2#(Joltage, Joltage), Maybe#(Joltage)) divServer <- mkExactDivider;
@@ -128,6 +130,8 @@ module mkJoltageSolver(JoltageSolver);
     matrix.upd(resetMachine, replicate(0));
     if (resetMachine + 1 == 0) state <= Idle;
     resetMachine <= resetMachine + 1;
+    max_machines <= 0;
+    max_buttons <= 0;
   endrule
 
   Reg#(Machine) i0 <- mkReg(?);
@@ -149,6 +153,95 @@ module mkJoltageSolver(JoltageSolver);
   Reg#(Machine) k <- mkReg(?);
   Reg#(Row) currentRow <- mkReg(?);
 
+  function ActionValue#(Bool) nextAssign();
+    actionvalue
+      Bool result = True;
+
+      for (Integer j=0; j < 15; j = j + 1)
+      if (basics[j] matches Invalid &&& result &&& fromInteger(j) <= max_buttons) begin
+        if (assigns[j] > bounds[j]) assigns[j] <= 0;
+        else begin
+          assigns[j] <= assigns[j] + 1;
+          result = False;
+        end
+      end
+
+      return result;
+    endactionvalue
+  endfunction
+
+  Reg#(Bit#(32)) currentCost <- mkReg(?);
+  Reg#(Bit#(32)) bestCost <- mkReg(?);
+  Reg#(Bool) validAssign <- mkReg(?);
+
+  // Check that the current assignment of the non-basic variables give a valid assignment of the
+  // basic variables and compute the cost in `currentCost`
+  let checkAssign = seq
+    action
+      validAssign <= True;
+      continue0 <= True;
+      currentCost <= 0;
+      i0 <= 0;
+      j0 <= 0;
+    endaction
+
+    while (continue0) seq
+      i0 <= unJust(basics[j0]);
+
+      if (isJust(basics[j0])) seq
+        action
+          Row row = matrix.sub(i0);
+          Joltage acc = row[cnstr];
+
+          for (Integer j=0; j < 15; j = j + 1) begin
+            if (fromInteger(j) != j0) acc = acc - row[j] * assigns[j];
+          end
+
+          divServer.request.put(tuple2(acc, row[j0]));
+          //$write("div(%d, %d) = ", acc, row[j0]);
+        endaction
+
+        action
+          let resp <- divServer.response.get;
+          case (resp) matches
+            tagged Valid .r : begin
+              //$display("%d", r);
+              validAssign <= r >= 0;
+              assigns[j0] <= r;
+            end
+            Invalid : validAssign <= False;
+          endcase
+        endaction
+      endseq
+
+      action
+        continue0 <= validAssign && j0 < max_buttons;
+        currentCost <= currentCost + zeroExtend(pack(assigns[j0]));
+        j0 <= j0 + 1;
+      endaction
+    endseq
+  endseq;
+
+  mkAlwaysFSMWithPred(seq
+    continue0 <= True;
+    bestCost <= maxBound;
+
+    while (continue0) seq
+      checkAssign;
+
+      action
+        if (validAssign && currentCost < bestCost) begin
+          bestCost <= currentCost;
+        end
+
+        let nextPossible <- nextAssign;
+        continue0 <= !nextPossible;
+      endaction
+    endseq
+
+    state <= Output;
+  endseq, state == BruteForce);
+
   // Compute for bounds for the brute force phase, i0 and j0 must be set to 0 after this phase
   rule computeBounds if (state == ComputeBounds);
     Row row = matrix.sub(i0);
@@ -162,6 +255,8 @@ module mkJoltageSolver(JoltageSolver);
 
   function Joltage abs(Joltage x) = x > 0 ? x : -x;
 
+  // Look for a row `k` such that `matrix[k][j0] != 0` and swap the row `k` and `r`, and set `j0`
+  // as a basic variable of column `r`.
   mkAlwaysFSMWithPred(seq
       action
         coef <= matrix.sub(r)[j0];
@@ -177,17 +272,18 @@ module mkJoltageSolver(JoltageSolver);
           k <= i0;
         end
 
-        continue0 <= i0 + 1 != 0;
+        continue0 <= i0 < max_machines;
         i0 <= i0 + 1;
       endaction
 
       if (coef != 0) seq
+        basics[j0] <= Valid(r);
         currentRow <= matrix.sub(k);
         matrix.upd(k, matrix.sub(r));
         matrix.upd(r, currentRow);
         state <= MultiplyRows;
       endseq else action
-        if (j0 + 1 == cnstr) state <= Dump;
+        if (j0 == max_buttons) state <= BruteForce;
         j0 <= j0 + 1;
       endaction
   endseq, state == SearchNonZero);
@@ -204,13 +300,11 @@ module mkJoltageSolver(JoltageSolver);
         if (i0 != r) seq
           action
             Row row = matrix.sub(i0);
-            //$write("divGcd(%d,%d)", fshow(coef), fshow(row[j0]));
             gcdServer.request.put(tuple2(coef, row[j0]));
           endaction
 
           action
             let resp <- gcdServer.response.get;
-            //$display(" = (%d,%d)", resp.fst, resp.snd);
             gcdResponse <= resp;
           endaction
 
@@ -226,45 +320,18 @@ module mkJoltageSolver(JoltageSolver);
 
         action
           i0 <= i0 + 1;
-          continue0 <= i0 + 1 != 0;
+          continue0 <= i0 < max_machines;
         endaction
       endseq
 
       action
         r <= r + 1;
         j0 <= j0 + 1;
-        state <= j0 + 1 == cnstr ? Dump : SearchNonZero;
+        state <= j0 == max_buttons ? BruteForce : SearchNonZero;
       endaction
   endseq, state == MultiplyRows);
 
-  mkAlwaysFSMWithPred(seq
-      i0 <= 0;
-      continue0 <= True;
-
-      while (continue0) action
-        Row row = matrix.sub(i0);
-        Bool empty = True;
-
-        for (Integer j=0; j < 15; j = j + 1) begin
-          if (row[j] != 0) begin
-            if (!empty) $write(" + ");
-            $write("%d * x%h", row[j], j);
-            empty = False;
-          end
-        end
-
-        if (!empty) begin
-          $display(" = %d", row[cnstr]);
-        end
-
-        continue0 <= i0 + 1 != 0;
-        i0 <= i0 + 1;
-      endaction
-
-      state <= Idle;
-  endseq, state == Dump);
-
-  method Action call;
+  method Action call if (state == Idle);
     state <= ComputeBounds;
     i0 <= 0;
     i1 <= 0;
@@ -274,13 +341,23 @@ module mkJoltageSolver(JoltageSolver);
     j2 <= 0;
   endmethod
 
+  method getResult if (state == Output);
+    actionvalue
+      state <= Idle;
+      return bestCost;
+    endactionvalue
+  endmethod
+
   method Action setJoltage(Machine machine, Joltage joltage) if (state == Idle);
+    max_machines <= max(machine, max_machines);
     Row row = matrix.sub(machine);
     row[cnstr] = joltage;
     matrix.upd(machine, row);
   endmethod
 
   method Action setButton(Machine machine, Button button) if (state == Idle);
+    max_machines <= max(machine, max_machines);
+    max_buttons <= max(button, max_buttons);
     Row row = matrix.sub(machine);
     row[button] = 1;
     matrix.upd(machine, row);
@@ -302,15 +379,17 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   Reg#(Bit#(32)) num_patterns <- mkReg(?);
 
   Reg#(Bit#(32)) result <- mkReg(0);
+  Reg#(Bit#(32)) joltageResult <- mkReg(0);
 
-  Vector#(NumLightSolver, Server#(SolverInput, Bit#(32))) solvers <- replicateM(mkLightsSolver);
-  Vector#(NumLightSolver, Reg#(Bool)) solvers_ready <- replicateM(mkReg(True));
+  Vector#(NumLightSolver, Server#(SolverInput, Bit#(32))) light_solvers <-
+    replicateM(mkLightsSolver);
+  Vector#(NumLightSolver, Reg#(Bool)) light_solvers_ready <- replicateM(mkReg(True));
 
   JoltageSolver joltageSolver <- mkJoltageSolver;
 
   Bit#(TLog#(NumLightSolver)) next_solver = 0;
   for (Integer i=0; i < valueOf(NumLightSolver); i = i + 1) begin
-    if (solvers_ready[i]) next_solver = fromInteger(i);
+    if (light_solvers_ready[i]) next_solver = fromInteger(i);
   end
 
   Reg#(Bit#(32)) cycle <- mkReg(0);
@@ -324,14 +403,21 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   Reg#(Bool) continue1 <- mkReg(True);
 
   for (Integer i=0; i < valueOf(NumLightSolver); i = i + 1) begin
-    rule add_result;
-      solvers_ready[i] <= True;
-      let ret <- solvers[i].response.get;
+    rule add_light_result;
+      light_solvers_ready[i] <= True;
+      let ret <- light_solvers[i].response.get;
       $display("increment result to %d at cycle %d", result + ret, cycle);
       transmit.put(ret[7:0]);
       result <= result + ret;
     endrule
   end
+
+  rule add_joltage_result;
+    let ret <- joltageSolver.getResult;
+    joltageResult <= joltageResult + ret;
+    $display("current solution for part 2: %d", joltageResult + ret);
+    transmit.put(ret[7:0]);
+  endrule
 
   Reg#(Machine) num_machine <- mkReg(?);
 
@@ -390,8 +476,8 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
       endseq
 
       action
-        solvers_ready[next_solver] <= False;
-        solvers[next_solver].request.put(SolverInput{
+        light_solvers_ready[next_solver] <= False;
+        light_solvers[next_solver].request.put(SolverInput{
           num_patterns: num_patterns,
           patterns: patterns,
           target: target
@@ -471,7 +557,7 @@ module mkExactDivider(Server#(Tuple2#(Joltage, Joltage), Maybe#(Joltage)));
     Bit#(DivideSize) d = zeroExtend(pack(req.snd < 0 ? -req.snd : req.snd));
     DivideUState#(DivideSize) newState = st;
 
-    for (Integer i=0; i < 1; i = i + 1) begin
+    for (Integer i=0; i < 4; i = i + 1) begin
       if (newState.index != 0) newState = divideStep(n, d, newState);
     end
 
