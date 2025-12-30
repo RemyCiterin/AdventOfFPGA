@@ -66,7 +66,7 @@ mistake. Ultimately, I used Gaussian reduction to partition the variables into t
 relationship on the non-basic variables.
 
 Then I performed a brute-force search on the non-basic variables.
-[][1]
+
 
 # Day 11 (part 1 and 2)
 
