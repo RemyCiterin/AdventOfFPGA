@@ -171,7 +171,7 @@ Then I adapted the classic algorithm for calculating the GCD by performing trans
 
 Here is the final implementation in Bluespec that I used:
 ```bsv
-// Return (in[0] / gcd(in[0], in[1]), in[0] / gcd(in[0], in[1]))
+// Return (in[0] / gcd(in[0], in[1]), in[1] / gcd(in[0], in[1]))
 module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
   Reg#(Joltage) x <- mkReg(?);
   Reg#(Joltage) y <- mkReg(?);

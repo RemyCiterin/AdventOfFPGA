@@ -594,7 +594,7 @@ module mkExactDivider(Server#(Tuple2#(Joltage, Joltage), Maybe#(Joltage)));
 endmodule
 
 
-// Return (in[0] / gcd(in[0], in[1]), in[0] / gcd(in[0], in[1]))
+// Return (in[0] / gcd(in[0], in[1]), in[1] / gcd(in[0], in[1]))
 module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
   Reg#(Joltage) x <- mkReg(?);
   Reg#(Joltage) y <- mkReg(?);
@@ -613,10 +613,14 @@ module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
 
   rule step if (!idle && !done);
     if (x < 0) begin
+      // x1 * (x / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // = -x1 * (-x / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // symetric argument for y1,y2
       x1 <= -x1;
       y1 <= -y1;
       x <= -x;
     end else if (y < 0) begin
+      // symetric of the previous argument
       x2 <= -x2;
       y2 <= -y2;
       y <= -y;
@@ -624,10 +628,12 @@ module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
       // x1 * (x / gcd(x,y)) + x2 * (y / gcd(x,y))
       // = x1 * ((x-y+y) / gcd(x,y)) + x2 * (y / gcd(x,y))
       // = x1 * ((x-y) / gcd(x,y)) + (x2+x1) * (y / gcd(x,y))
+      // symetric argument for y1,y2
       x2 <= x1 + x2;
       y2 <= y1 + y2;
       x <= x - y;
     end else begin
+      // symetric of the previous argument
       x1 <= x1 + x2;
       y1 <= y1 + y2;
       y <= y - x;
