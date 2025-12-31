@@ -15,7 +15,9 @@ starting from top-left corner of the box. To speed-ub the algorithm I perform th
 vertical and horizontal edges in parallel using the `par ... endpar` keywords from the
 finite-state-machines DSL in Bluespec.
 
-# Day 10 (part 1)
+# Day 10
+
+## Part 1
 
 My way of solving this problem is by doing a brute-force search over the buttons to find the
 solution. So I implemented a module of solver with the interface `Server#(SolverInput, Bit#(32))`
@@ -54,19 +56,118 @@ perform this iteration:
 
 doing so it is possible to use multiple parallel solvers to minimize the solving time.
 
-# Day 10 (part 2)
+## Part 2
 
 The part II was a lot harder that the part I for me. Initially, I misread the instructions and
 thought the Joltages were minimum values per machine, not exact values. As a result, I wasted a lot
 of time trying to adapt the Simplex algorithm and branch-and-bounds/Gomory cuts to run on an FPGA.
 I was about to give up due to accuracy issues when I reread the instructions and realized my
-mistake. Ultimately, I used Gaussian reduction to partition the variables into two groups:
+mistake. Ultimately, I used Gauss-Jordan reduction to partition the variables into two groups:
 - non-basic variables, which are unconstrained
 - and basic variables, which are constrained. Each basic variable can be obtained through an affine
 relationship on the non-basic variables.
 
 Then I performed a brute-force search on the non-basic variables.
 
+### Algorithmic improvement
+
+The main challenge to implement this algorithm is to deal with numeric stability: during each
+steps of the Gauss-Jordan reduction we have to perform the division of the current row by the pivot
+element of the matrix, this step can be a cause of instability. As example here is the pseudocode of
+the algorithm from wikipedia (translated from french):
+
+```
+Gauss-Jordan
+     r = 0
+     For j from 1 to m
+     |   Search k = max_i(|A[i,j]|, r+1 ≤ i ≤ n)
+     |
+     |   If A[k,j]≠0 then
+     |   |   r=r+1
+     |   |   Divide the row `k` by `A[k,j]`
+     |   |   If k≠r then
+     |   |       |   Swap(A[k,..], A[r, ..])
+     |   |   End If
+     |   |   For i from 1 to n
+     |   |   |   If i≠r then
+     |   |   |   |   A[i,..] = A[i,..] - A[i,j] * A[r,..]
+     |   |   |   Enf If
+     |   |   End For
+     |   End If
+     End For
+  End Gauss-Jordan
+```
+
+To deal with that my first idea was to use rational numbers. But using rationals I would have to
+normalize the matrix elements by calculating the GCD after each pivot. I therefore decided to lose
+the invariant that `A[r][j] == 1` after each pivot by using natural numbers with the following
+variant of the algorithm:
+
+```
+Gauss-Jordan
+     r = 0
+     For j from 1 to m
+     |   Search k = max_i(|A[i,j]|, r+1 ≤ i ≤ n)
+     |
+     |   If A[k,j]≠0 then
+     |   |   r=r+1
+     |   |   If k≠r then
+     |   |       |   Swap(A[k,..], A[r, ..])
+     |   |   End If
+     |   |   For i from 1 to n
+     |   |   |   If i≠r then
+     |   |   |   |   A[i,..] = A[r,j] * A[i,..] - A[i,j] * A[r,..]
+     |   |   |   Enf If
+     |   |   End For
+     |   End If
+     End For
+  End Gauss-Jordan
+```
+
+But after experimenting with my puzzle input, I deduced that I should use 256-bit integers to
+avoid overflow. However, larger integers mean using more multipliers, which are a rare resource on
+my FPGA (I have 156 18x18 multipliers). Specifically, if I use sufficiently small integers, I can
+hope to perform row multiplications in a single cycle.
+
+So I tried this other variation by adding a division by a GCD (which can be calculated at the same
+time as the GCD) in the right place:
+
+```
+Gauss-Jordan
+     r = 0
+     For j from 1 to m
+     |   Search k = max_i(|A[i,j]|, r+1 ≤ i ≤ n)
+     |
+     |   If A[k,j]≠0 then
+     |   |   r=r+1
+     |   |   If k≠r then
+     |   |       |   Swap(A[k,..], A[r, ..])
+     |   |   End If
+     |   |   For i from 1 to n
+     |   |   |   If i≠r then
+     |   |   |   |   a = A[r,j] / GCD(A[i,j], A[r,j])
+     |   |   |   |   b = A[i,j] / GCD(A[i,j], A[r,j])
+     |   |   |   |   A[i,..] = a * A[i,..] - b * A[r,..]
+     |   |   |   Enf If
+     |   |   End For
+     |   End If
+     End For
+  End Gauss-Jordan
+```
+
+Thanks to this change, 16-bit integers are sufficient!
+
+Then, to calculate divisions by the GCD, with `in0, in1` as inputs, I used `6` registers
+`x,y,x1,x2,y1,y2` with the following invariants:
+
+```
+gcd(in0, in1) = gcd(x, y)
+in0 / gcd(in0, in1) = x1 * (x / gcd(in0, in1)) + x2 * (y / (gcd(in0, in1)))
+in1 / gcd(in0, in1) = y1 * (x / gcd(in0, in1)) + y2 * (y / (gcd(in0, in1)))
+```
+
+Then I adapted the classic algorithm for calculating the GCD by performing transitions for `x < 0`,
+`y < 0`, `x > y > 0`, `0 < x < y`... while maintaining these invariants.
 
 # Day 11 (part 1 and 2)
 
@@ -247,13 +348,13 @@ implementation in a compiled programming language. All the programs where compil
 | Day 1 (part 1)        | 35.9K           | 4.94M         | 4.06M                | 138x       |
 | Day 9 (part 1 and 2)  | 6.41M           |               |                      |            |
 | Day 10 (part 1)       | 37.1K           | 21.1M         | 13.0M                | 569x       |
-| Day 10 (part 2)       | 23.7M           |               |                      |            |
+| Day 10 (part 2)       | 23.7M           | TIMEOUT       | TIMEOUT              | N/A        |
 | Day 11 (part 1)       | 47.9K           | 62.2M         | 52.0M                | 1090x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
 Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting
 for it. So I disabled it to get results that were representative of the time spent doing
-calculations.
+calculations. All those tests where performed using my personal puzzle input.
 
 Even though my CPU isn't as optimized as industrial CPUs (with superscalar execution, SIMD, etc.),
 the performance difference is still very impressive.
