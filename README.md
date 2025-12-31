@@ -169,6 +169,78 @@ in1 / gcd(in0, in1) = y1 * (x / gcd(in0, in1)) + y2 * (y / (gcd(in0, in1)))
 Then I adapted the classic algorithm for calculating the GCD by performing transitions for `x < 0`,
 `y < 0`, `x > y > 0`, `0 < x < y`... while maintaining these invariants.
 
+Here is the final implementation in Bluespec that I used:
+```bsv
+// Return (in[0] / gcd(in[0], in[1]), in[0] / gcd(in[0], in[1]))
+module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
+  Reg#(Joltage) x <- mkReg(?);
+  Reg#(Joltage) y <- mkReg(?);
+
+  Reg#(Joltage) x1 <- mkReg(?);
+  Reg#(Joltage) x2 <- mkReg(?);
+  Reg#(Joltage) y1 <- mkReg(?);
+  Reg#(Joltage) y2 <- mkReg(?);
+
+  Reg#(Bool) idle <- mkReg(True);
+
+  Bool done = x >= 0 && y >= 0 && (y == 0 || y == 0 || x == y);
+
+  rule step if (!idle && !done);
+    if (x < 0) begin
+      // x1 * (x / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // = -x1 * (-x / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // symetric argument for y1,y2
+      x1 <= -x1;
+      y1 <= -y1;
+      x <= -x;
+    end else if (y < 0) begin
+      // symetric of the previous argument
+      x2 <= -x2;
+      y2 <= -y2;
+      y <= -y;
+    end else if (x > y) begin
+      // x1 * (x / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // = x1 * ((x-y+y) / gcd(x,y)) + x2 * (y / gcd(x,y))
+      // = x1 * ((x-y) / gcd(x,y)) + (x2+x1) * (y / gcd(x,y))
+      // symetric argument for y1,y2
+      x2 <= x1 + x2;
+      y2 <= y1 + y2;
+      x <= x - y;
+    end else begin
+      // symetric of the previous argument
+      x1 <= x1 + x2;
+      y1 <= y1 + y2;
+      y <= y - x;
+    end
+  endrule
+
+  interface Put request;
+    method Action put(Tuple2#(Joltage, Joltage) req) if (idle);
+      idle <= False;
+      x <= req.fst;
+      y <= req.snd;
+      x1 <= 1;
+      x2 <= 0;
+      y1 <= 0;
+      y2 <= 1;
+    endmethod
+  endinterface
+
+  interface Get response;
+    method ActionValue#(Tuple2#(Joltage, Joltage)) get if (!idle && done);
+      idle <= True;
+
+      if (x == 0) return tuple2(x2, y2);
+      else if (y == 0) return tuple2(x1, y1);
+      else begin
+        return tuple2(x1+x2, y1+y2);
+      end
+    endmethod
+  endinterface
+endmodule
+
+```
+
 # Day 11 (part 1 and 2)
 
 For this problem I focused on the first part, as the second part is just repeating the first one
