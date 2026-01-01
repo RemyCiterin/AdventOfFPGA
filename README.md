@@ -431,7 +431,7 @@ implementation in a compiled programming language. All the programs where compil
 | Day 1 (part 1)        | 35.9K           | 1.15M         | 562K                 | 32x        |
 | Day 9 (part 1 and 2)  | 6.41M           |               |                      |            |
 | Day 10 (part 1)       | 37.1K           | 13.5M         | 825K                 | 364x       |
-| Day 10 (part 2)       | 12.4M           | TIMEOUT       | TIMEOUT              | N/A        |
+| Day 10 (part 1&2)     | 12.4M           | 421M          | 350M                 | 34x        |
 | Day 11 (part 1)       | 47.9K           | 2.84M         | 2.00M                | 59.3x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
