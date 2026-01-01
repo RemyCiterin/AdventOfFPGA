@@ -69,7 +69,7 @@ relationship on the non-basic variables.
 
 Then I performed a brute-force search on the non-basic variables.
 
-### Algorithmic improvement
+### Gauss-Jordan reduction
 
 The main challenge to implement this algorithm is to deal with numeric stability: during each
 steps of the Gauss-Jordan reduction we have to perform the division of the current row by the pivot
@@ -169,7 +169,7 @@ in1 / gcd(in0, in1) = y1 * (x / gcd(in0, in1)) + y2 * (y / (gcd(in0, in1)))
 Then I adapted the classic algorithm for calculating the GCD by performing transitions for `x < 0`,
 `y < 0`, `x > y > 0`, `0 < x < y`... while maintaining these invariants.
 
-Here is the final implementation in Bluespec that I used:
+Here is the final implementation in Bluespec that I used for it:
 ```bsv
 // Return (in[0] / gcd(in[0], in[1]), in[1] / gcd(in[0], in[1]))
 module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
@@ -238,8 +238,19 @@ module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
     endmethod
   endinterface
 endmodule
-
 ```
+
+### Brute-force
+
+After doing the Gauss-Jordan reduction, we have two partitions of variables made of a set of basic
+variables `B` and a set of non-basic (unconstrained) variables `N`, and for each basic variable
+`Xi`, we have `Xi = (Bi - sum({ Aij * Xj | j in N })) / Ai` and we search the assignation from those
+variables to the positive integers that minimize the sum of all the variables. To do so we can
+iterate over all the possible assignations of the non-basic variables, and check for all the basic
+variables `Xi` if `(Bi - sum({ Aij * Xj | j in N })) / Ai` is a positive integer. This is possible
+because the initial problem give us some bounds about the assignations: if a button increment the
+joltage of an engine, then it must be assigned to a value smaller than the required joltage of the
+engine.
 
 # Day 11 (part 1 and 2)
 
@@ -417,11 +428,11 @@ implementation in a compiled programming language. All the programs where compil
 
 |                       | Bluespec cycles | OOO CPU cycle | OOO CPU instructions | Imrovement |
 |-----------------------|-----------------|---------------|----------------------|------------|
-| Day 1 (part 1)        | 35.9K           | 4.94M         | 4.06M                | 138x       |
+| Day 1 (part 1)        | 35.9K           | 1.15M         | 562K                 | 32x        |
 | Day 9 (part 1 and 2)  | 6.41M           |               |                      |            |
-| Day 10 (part 1)       | 37.1K           | 21.1M         | 13.0M                | 569x       |
-| Day 10 (part 2)       | 23.7M           | TIMEOUT       | TIMEOUT              | N/A        |
-| Day 11 (part 1)       | 47.9K           | 62.2M         | 52.0M                | 1090x      |
+| Day 10 (part 1)       | 37.1K           | 13.5M         | 825K                 | 364x       |
+| Day 10 (part 2)       | 12.4M           | TIMEOUT       | TIMEOUT              | N/A        |
+| Day 11 (part 1)       | 47.9K           | 2.84M         | 2.00M                | 59.3x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
 Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting

@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) !void {
         .cpu_arch = Target.Cpu.Arch.riscv32,
         .cpu_model = .{ .explicit = &Target.riscv.cpu.generic_rv32 },
         .cpu_features_add = Target.riscv.featureSet(&[_]Feature{
-            //.m,
+            .m,
             .zicbom,
         }),
         .os_tag = .freestanding,

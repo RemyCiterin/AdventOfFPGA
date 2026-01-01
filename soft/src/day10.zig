@@ -6,7 +6,7 @@ pub fn solveLights(target: usize, patterns: []usize, num_patterns: usize) usize 
     const num_seed = @as(usize, 1) << @intCast(num_patterns);
     var best_count: usize = 100;
 
-    for (0..num_seed) |seed| {
+    outer: for (0..num_seed) |seed| {
         var pattern: usize = 0;
         var count: usize = 0;
 
@@ -15,6 +15,8 @@ pub fn solveLights(target: usize, patterns: []usize, num_patterns: usize) usize 
                 pattern = pattern ^ patterns[i];
                 count += 1;
             }
+
+            if (count >= best_count) continue :outer;
         }
 
         if (pattern == target)
@@ -39,6 +41,8 @@ pub const JoltageSolver = struct {
     bounds: [M]i16 = .{std.math.maxInt(i16)} ** M,
 
     assign: [M]i16 = .{0} ** M,
+
+    best_joltage: i32 = std.math.maxInt(i32),
 
     // Approximation of the number of cycles required in hardware usign a finite state machine
     cycles: usize = 0,
@@ -105,6 +109,12 @@ pub const JoltageSolver = struct {
         var total: i32 = 0;
 
         for (0..self.num_vars) |j| {
+            if (self.basic[j] == null)
+                total += @intCast(self.assign[j]);
+        }
+
+        for (0..self.num_vars) |j| {
+            if (total >= self.best_joltage) return null;
             self.cycles += 1;
 
             if (self.basic[j]) |i| {
@@ -118,8 +128,6 @@ pub const JoltageSolver = struct {
                 const div = self.division(acc, coef) orelse return null;
                 if (div < 0) return null;
                 total += @intCast(div);
-            } else {
-                total += @intCast(self.assign[j]);
             }
         }
 
@@ -224,17 +232,16 @@ pub const JoltageSolver = struct {
             }
         }
 
-        var total: i32 = std.math.maxInt(i32);
         self.dump();
 
         while (true) {
             if (self.checkAssign()) |t|
-                total = @min(total, t);
+                self.best_joltage = @min(self.best_joltage, t);
 
             if (self.nextAssign()) break;
         }
 
-        return total;
+        return self.best_joltage;
     }
 };
 

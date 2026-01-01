@@ -215,8 +215,9 @@ module mkJoltageSolver(JoltageSolver);
       endseq
 
       action
-        continue0 <= validAssign && j0 < max_buttons;
-        currentCost <= currentCost + zeroExtend(pack(assigns[j0]));
+        Bit#(32) newCost = zeroExtend(pack(assigns[j0]));
+        continue0 <= validAssign && j0 < max_buttons && currentCost + newCost < bestCost;
+        currentCost <= currentCost + newCost;
         j0 <= j0 + 1;
       endaction
     endseq
@@ -512,11 +513,22 @@ typedef struct {
   Bit#(size) index;
   Bit#(size) rem;
   Bit#(size) div;
+  Bit#(size) num;
+  Bit#(size) den;
 } DivideUState#(numeric type size) deriving(Bits, FShow, Eq);
 
-function DivideUState#(size) divideInit;
+function DivideUState#(size) divideInit(Bit#(size) num, Bit#(size) den);
+  Bool found = False;
+  Bit#(size) index = 0;
+  for (Integer i=valueOf(size)-1; i >= 0; i = i - 1) if (!found && num[i] == 1) begin
+    index[i] = 1;
+    found = True;
+  end
+
   return DivideUState{
-    index: 1 << (valueOf(size) - 1),
+    index: index,//1 << (valueOf(size) - 1),
+    num: num,
+    den: den,
     rem: 0,
     div: 0
   };
@@ -527,11 +539,11 @@ endfunction
 //   2 * a + 1 = b * (2^-n * q) + 2*r+1
 //
 // Then we remove b to the reminder if 2*r+1 or 2*r is greater than b
-function DivideUState#(size) divideStep(Bit#(size) num, Bit#(size) den, DivideUState#(size) state);
-  state.rem = (num & state.index) != 0 ? (state.rem << 1) | 1 : state.rem << 1;
+function DivideUState#(size) divideStep(DivideUState#(size) state);
+  state.rem = (state.num & state.index) != 0 ? (state.rem << 1) | 1 : state.rem << 1;
 
-  if (state.rem >= den) begin
-    state.rem = state.rem - den;
+  if (state.rem >= state.den) begin
+    state.rem = state.rem - state.den;
     state.div = state.div | state.index;
   end
 
@@ -553,12 +565,10 @@ module mkExactDivider(Server#(Tuple2#(Joltage, Joltage), Maybe#(Joltage)));
   Reg#(Tuple2#(Joltage, Joltage)) req <- mkReg(?);
 
   rule step if (state matches tagged Busy .st &&& st.index != 0);
-    Bit#(DivideSize) n = zeroExtend(pack(req.fst < 0 ? -req.fst : req.fst));
-    Bit#(DivideSize) d = zeroExtend(pack(req.snd < 0 ? -req.snd : req.snd));
     DivideUState#(DivideSize) newState = st;
 
     for (Integer i=0; i < 4; i = i + 1) begin
-      if (newState.index != 0) newState = divideStep(n, d, newState);
+      if (newState.index != 0) newState = divideStep(newState);
     end
 
     state <= Busy(newState);
@@ -566,7 +576,9 @@ module mkExactDivider(Server#(Tuple2#(Joltage, Joltage), Maybe#(Joltage)));
 
   interface Put request;
     method Action put(Tuple2#(Joltage, Joltage) r) if (state matches Idle);
-      state <= Busy(divideInit);
+      let num = zeroExtend(pack(r.fst < 0 ? -r.fst : r.fst));
+      let den = zeroExtend(pack(r.snd < 0 ? -r.snd : r.snd));
+      state <= Busy(divideInit(num, den));
       req <= r;
     endmethod
   endinterface
@@ -632,7 +644,7 @@ module mkDivGcd(Server#(Tuple2#(Joltage, Joltage), Tuple2#(Joltage, Joltage)));
       x2 <= x1 + x2;
       y2 <= y1 + y2;
       x <= x - y;
-    end else begin
+    end else if (y > x) begin
       // symetric of the previous argument
       x1 <= x1 + x2;
       y1 <= y1 + y2;
