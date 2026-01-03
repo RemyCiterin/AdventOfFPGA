@@ -427,10 +427,12 @@ implementation in a compiled programming language. All the programs where compil
 `-Doptimize=ReleaseFast`.
 
 For the day 9, I also compared with 3DRiscV, a Soc that I made this year. It contains an in-order
-RISC-V CPU and a RISC-V GPU connected together using a cache coherent interconnect. The GPU use 16
-warps of 4 threads (so it can execute up to four instructions per cycle), the shaders are compiled
-using my own optimizing compiler, which allows me to efficiently manage thread reconvergence. For
-this example, the code running on the CPU is implemented in C with `gcc -O2`.
+RISC-V CPU and a RISC-V GPGPU connected together using a cache coherent interconnect. The GPGPU use
+16 warps of 4 threads (so it can execute up to four instructions per cycle), the shaders are
+compiled using my own optimizing compiler, which allows me to efficiently manage thread
+reconvergence. For this example, the code running on the CPU is implemented in C with `gcc -O2`.
+Unfortunately, the performance difference with DOoOM is not very impressive, even though using the
+GPGPU greatly increases performance compared to the in-order CPU alone (186M cycles, versus 290M).
 
 |                   | Bluespec cycles | DOoOM cycles | 3DRiscV cycles | Imrovement |
 |-------------------|-----------------|--------------|----------------|------------|
