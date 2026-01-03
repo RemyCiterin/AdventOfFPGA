@@ -1,3 +1,6 @@
 [submodule "DOoOM"]
 	path = DOoOM
 	url = git@github.com:RemyCiterin/DOoOM.git
+[submodule "3DRiscV"]
+	path = 3DRiscV
+	url = git@github.com:RemyCiterin/3DRiscV.git

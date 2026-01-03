@@ -4,3 +4,8 @@ rtl
 soft/zig-cache
 soft/zig-out
 elf_to_hex/elf_to_hex
+gpu_firmware/build
+gpu_firmware/GpuMem.hex
+gpu_firmware/Mem.ihex
+gpu_firmware/Mem.hex
+
