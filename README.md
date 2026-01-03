@@ -435,7 +435,7 @@ this example, the code running on the CPU is implemented in C with `gcc -O2`.
 |                   | Bluespec cycles | DOoOM cycle | 3DRiscV cycles | Imrovement |
 |-------------------|-----------------|-------------|----------------|------------|
 | Day 1 (part 1)    | 35.9K           | 1.15M       | N/A            | 32x        |
-| Day 9 (part 1&2)  | 6.41M           | N/A         | 273M           | 43x        |
+| Day 9 (part 1&2)  | 6.41M           | N/A         | 186M           | 29x        |
 | Day 10 (part 1)   | 37.1K           | 13.5M       | N/A            | 364x       |
 | Day 10 (part 1&2) | 12.4M           | 421M        | N/A            | 34x        |
 | Day 11 (part 1)   | 47.9K           | 2.84M       | N/A            | 59.3x      |

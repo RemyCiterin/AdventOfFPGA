@@ -4,12 +4,11 @@
 #include "stdlib.h"
 #include "stats.h"
 
-// CPU version: 298.791M cycles
-// GPU version: 273.558M cycles
+#define NUM_WARP 16
+#define WARP_SIZE 4
+#define NCPU (NUM_WARP * WARP_SIZE)
 
-#define NCPU (4 * 16)
-
-int volatile kernel_lock[NCPU];
+int volatile kernel_lock[NUM_WARP];
 
 timestamp_t volatile start_timestamp;
 timestamp_t volatile finish_timestamp;
@@ -52,32 +51,72 @@ unsigned readint(char* buf, unsigned size, uint32_t *ret) {
 uint64_t best_area;
 
 uint64_t area_buffer[NCPU];
-int gpu_core_index;
+//int gpu_core_index;
+
+bool warp_is_running[NUM_WARP];
+
+// Index of the current scheduled warp
+int current_warp;
+
+// Index of the current thread in the current warp
+int current_thread;
+
+bool is_warp_ready(int warp) {
+  for (int i=0; i < WARP_SIZE; i++)
+    if (!bitmask[i+warp*WARP_SIZE])
+      return false;
+  return true;
+}
+
+void complete_warp(int warp) {
+  for (int i=0; i < WARP_SIZE; i++) {
+    if (hit_buffer[i+warp*WARP_SIZE] == 0 && area_buffer[i+warp*WARP_SIZE] > best_area)
+      best_area = area_buffer[i+warp*WARP_SIZE];
+  }
+
+  warp_is_running[warp] = false;
+}
+
+int next_warp() {
+  while (true) {
+    for (int warp=0; warp < NUM_WARP; warp++) {
+      if (warp_is_running[warp]) {
+        if (!is_warp_ready(warp)) continue;
+        complete_warp(warp);
+        return warp;
+      } else {
+        return warp;
+      }
+    }
+  }
+}
+
+void start_current_warp() {
+  warp_is_running[current_warp] = true;
+
+  for (int i=0; i < WARP_SIZE; i++) {
+    bitmask[i + current_warp * WARP_SIZE] = 0;
+  }
+
+  kernel_lock[current_warp]++;
+
+  current_warp = next_warp();
+  for (int i=0; i < WARP_SIZE; i++)
+    valid_buffer[i + current_warp * WARP_SIZE] = 0;
+  current_thread = 0;
+}
 
 ////////////////////////////////////////////////////////////////////////////
 // Run a set of intersection computations on the GPU
 ////////////////////////////////////////////////////////////////////////////
 void run_gpu_kernel() {
-  ////////////////////////////////////////////////////////////////////////////
-  // Synchronize GPU threads
-  ////////////////////////////////////////////////////////////////////////////
-  set_print_device(DEVICE_GPU);
-  for (int i=0; i < NCPU; i++) valid_buffer[i] = i < gpu_core_index;
-  for (int i=0; i < NCPU; i++) bitmask[i] = 0;
-  for (int i=0; i < NCPU; i++) kernel_lock[i]++;
-
-  ////////////////////////////////////////////////////////////////////////////
-  // Wait for the kernel computation to finish
-  ////////////////////////////////////////////////////////////////////////////
-  for (int i=0; i < NCPU; i++) while (!bitmask[i]) {}
-  set_print_device(DEVICE_CPU);
-
-  for (int i=0; i < gpu_core_index; i++) {
-    if (hit_buffer[i] == 0 && area_buffer[i] > best_area)
-      best_area = area_buffer[i];
+  start_current_warp();
+  for (int warp=0; warp < NUM_WARP; warp++) {
+    if (warp_is_running[warp]) {
+      while (!is_warp_ready(warp)) continue;
+      complete_warp(warp);
+    }
   }
-
-  gpu_core_index = 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -85,14 +124,18 @@ void run_gpu_kernel() {
 // necessary (by running all their computations)
 ////////////////////////////////////////////////////////////////////////////
 void enq_computation(uint64_t area, uint32_t xmin, uint32_t xmax, uint32_t ymin, uint32_t ymax) {
-  if (gpu_core_index >= NCPU) run_gpu_kernel();
-
+  int gpu_core_index = current_thread + WARP_SIZE*current_warp;
   area_buffer[gpu_core_index] = area;
   xmin_buffer[gpu_core_index] = xmin;
   xmax_buffer[gpu_core_index] = xmax;
   ymin_buffer[gpu_core_index] = ymin;
   ymax_buffer[gpu_core_index] = ymax;
-  gpu_core_index++;
+  valid_buffer[gpu_core_index] = 1;
+  current_thread++;
+
+  if (current_thread == WARP_SIZE) {
+    start_current_warp();
+  }
 }
 
 extern void cpu_main() {
@@ -199,7 +242,7 @@ extern void cpu_main() {
   ////////////////////////////////////////////////////////////////////////////
   // Empty the computation buffers
   ////////////////////////////////////////////////////////////////////////////
-  gpu_core_index = 0;
+  //gpu_core_index = 0;
 
   init_timestamp((timestamp_t*)&start_timestamp);
   for (int i=0; i < num_points; i++) {
@@ -267,7 +310,7 @@ extern void gpu_main(int threadid) {
   int expected = 1;
 
   while (true) {
-    while (kernel_lock[threadid] != expected) {}
+    while (kernel_lock[threadid / WARP_SIZE] != expected) {}
     kernel(threadid, num_vedges, num_hedges);
     bitmask[threadid] = 1;
     expected++;
