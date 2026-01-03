@@ -432,13 +432,13 @@ warps of 4 threads (so it can execute up to four instructions per cycle), the sh
 using my own optimizing compiler, which allows me to efficiently manage thread reconvergence. For
 this example, the code running on the CPU is implemented in C with `gcc -O2`.
 
-|                   | Bluespec cycles | DOoOM cycle | 3DRiscV cycles | Imrovement |
-|-------------------|-----------------|-------------|----------------|------------|
-| Day 1 (part 1)    | 35.9K           | 1.15M       | N/A            | 32x        |
-| Day 9 (part 1&2)  | 6.41M           | N/A         | 186M           | 29x        |
-| Day 10 (part 1)   | 37.1K           | 13.5M       | N/A            | 364x       |
-| Day 10 (part 1&2) | 12.4M           | 421M        | N/A            | 34x        |
-| Day 11 (part 1)   | 47.9K           | 2.84M       | N/A            | 59.3x      |
+|                   | Bluespec cycles | DOoOM cycles | 3DRiscV cycles | Imrovement |
+|-------------------|-----------------|--------------|----------------|------------|
+| Day 1 (part 1)    | 35.9K           | 1.15M        | N/A            | 32x        |
+| Day 9 (part 1&2)  | 6.41M           | 208M         | 186M           | 32x/29x    |
+| Day 10 (part 1)   | 37.1K           | 13.5M        | N/A            | 364x       |
+| Day 10 (part 1&2) | 12.4M           | 421M         | N/A            | 34x        |
+| Day 11 (part 1)   | 47.9K           | 2.84M        | N/A            | 59.3x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
 Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting

@@ -10,6 +10,7 @@ const print = UART.putString;
 const Day1 = @import("day1.zig");
 const Day11 = @import("day11.zig");
 const Day10 = @import("day10.zig");
+const Day9 = @import("day9.zig");
 
 const RV = @import("riscv.zig");
 
@@ -80,8 +81,8 @@ pub export fn kernel_main() align(16) callconv(.C) void {
         \\Kernel allocator initialized!
     , .{});
 
-    Day10.solveDay10() catch {
-        @panic("error while solving day1");
+    Day9.solveDay9() catch {
+        @panic("error while solving");
     };
 
     hang();
