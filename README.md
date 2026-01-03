@@ -426,13 +426,19 @@ possible to see the improvement of an hardware implementation in Bluespec agains
 implementation in a compiled programming language. All the programs where compiled with
 `-Doptimize=ReleaseFast`.
 
-|                       | Bluespec cycles | OOO CPU cycle | OOO CPU instructions | Imrovement |
-|-----------------------|-----------------|---------------|----------------------|------------|
-| Day 1 (part 1)        | 35.9K           | 1.15M         | 562K                 | 32x        |
-| Day 9 (part 1 and 2)  | 6.41M           |               |                      |            |
-| Day 10 (part 1)       | 37.1K           | 13.5M         | 825K                 | 364x       |
-| Day 10 (part 1&2)     | 12.4M           | 421M          | 350M                 | 34x        |
-| Day 11 (part 1)       | 47.9K           | 2.84M         | 2.00M                | 59.3x      |
+For the day 9, I also compared with 3DRiscV, a Soc that I made this year. It contains an in-order
+RISC-V CPU and a RISC-V GPU connected together using a cache coherent interconnect. The GPU use 16
+warps of 4 threads (so it can execute up to four instructions per cycle), the shaders are compiled
+using my own optimizing compiler, which allows me to efficiently manage thread reconvergence. For
+this example, the code running on the CPU is implemented in C with `gcc -O2`.
+
+|                   | Bluespec cycles | DOoOM cycle | DOoOM instrs | 3DRiscV cycles | Imrovement |
+|-------------------|-----------------|-------------|--------------|----------------|------------|
+| Day 1 (part 1)    | 35.9K           | 1.15M       | 562K         | N/A            | 32x        |
+| Day 9 (part 1&2)  | 6.41M           | N/A         | N/A          | 273M           | 43x        |
+| Day 10 (part 1)   | 37.1K           | 13.5M       | 825K         | N/A            | 364x       |
+| Day 10 (part 1&2) | 12.4M           | 421M        | 350M         | N/A            | 34x        |
+| Day 11 (part 1)   | 47.9K           | 2.84M       | 2.00M        | N/A            | 59.3x      |
 
 These tests are cycle-accurate except for the UART, which responds in one cycle.
 Indeed, if the UART were simulated with cycle accuracy, then most of the time would be spent waiting
