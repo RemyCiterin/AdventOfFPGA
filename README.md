@@ -463,10 +463,10 @@ endseq
 # Performances
 
 For all the problems, I compared the performance of my solution with an implementation in Zig
-(Zig-0.12) running on my own out-of-order RISC-V CPU that I made a year ago. Doing so, it is
-possible to see the improvement of an hardware implementation in Bluespec against a more standard
-implementation in a compiled programming language. All the programs where compiled with
-`-Doptimize=ReleaseFast`.
+(Zig-0.12) running on my own out-of-order RISC-V CPU that I made a year ago named DOoOM (for DOoOM
+Out-of-Order Machine, and yes, it can run DOOM). Doing so, it is possible to see the improvement of
+an hardware implementation in Bluespec against a more standard implementation in a compiled
+programming language. All the programs where compiled with `-Doptimize=ReleaseFast`.
 
 For the day 9, I also compared with 3DRiscV, a Soc that I made this year. It contains an in-order
 RISC-V CPU and a RISC-V GPGPU connected together using a cache coherent interconnect. The GPGPU use
