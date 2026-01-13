@@ -283,6 +283,8 @@ engine.
 
 # Day 11 (part 1 and 2)
 
+https://github.com/user-attachments/assets/6ae397db-db49-4fed-8fda-ec206571f007
+
 For this problem I focused on the first part, as the second part is just repeating the first one
 four times, then use the formula:
 
