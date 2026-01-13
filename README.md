@@ -18,24 +18,22 @@ make bsim DAY=<insert a number, I support 1,9,10,11>
 
 to use my personal puzzle input instead.
 
+You can also use the following command to run the design on a ULX3S FPGA board:
+
+```bash
+make compile yosys nextpnr ecppack prog_t DAY=<insert a number, I support 1,9,10,11>
+```
+
 # Day 1
 
-
-
 https://github.com/user-attachments/assets/ea64b168-f5a7-44a6-9a84-dac7d63e52d0
-
-
 
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
 # Day 9 (part 1 and 2)
 
-
-
 https://github.com/user-attachments/assets/21878be7-3cbd-4320-af5c-8413102e29b3
-
-
 
 For this day I solved both parts using some kind of brute force algorithms. In the first part I just
 iterate over all the possible boxes and save the best area I found. And in the second part I
