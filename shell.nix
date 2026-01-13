@@ -13,6 +13,7 @@ in
 
 pkgs.mkShell {
   buildInputs = [
+    pkgs.libelf
     pkgs.bluespec
     pkgs.verilator
     pkgs.verilog

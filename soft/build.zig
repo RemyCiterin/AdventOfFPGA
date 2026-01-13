@@ -11,7 +11,6 @@ pub fn build(b: *std.Build) !void {
         .cpu_model = .{ .explicit = &Target.riscv.cpu.generic_rv32 },
         .cpu_features_add = Target.riscv.featureSet(&[_]Feature{
             .m,
-            .zicbom,
         }),
         .os_tag = .freestanding,
         .abi = .none, // .eabi
@@ -25,6 +24,16 @@ pub fn build(b: *std.Build) !void {
         .target = b.resolveTargetQuery(target),
         .optimize = optimize,
     });
+
+    const day = b.option(
+        u32,
+        "day",
+        "The puzzle that you want to solve (in {1,9,10,11})",
+    ) orelse 1;
+
+    const options = b.addOptions();
+    options.addOption(u32, "day", day);
+    exe.root_module.addOptions("config", options);
 
     //exe.addAssemblyFile(.{ .cwd_relative = "src/trampoline.s" });
     exe.addAssemblyFile(.{ .cwd_relative = "src/init.S" });

@@ -66,7 +66,7 @@ dooom:
 	make -C DOoOM compile_sim
 
 run_dooom:
-	make -C soft build
+	make -C soft build DAY=$(DAY)
 	elf_to_hex/elf_to_hex soft/zig-out/bin/kernel.elf Mem.hex
 	cat $(INPUT_FILE) | ./DOoOM/bsim/bsim -m 1000000000
 

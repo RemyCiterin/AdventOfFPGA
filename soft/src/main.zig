@@ -77,13 +77,23 @@ pub export fn kernel_main() align(16) callconv(.C) void {
     var kernel_fba = std.heap.FixedBufferAllocator.init(kalloc_buffer[0..kalloc_len]);
     kalloc = kernel_fba.allocator();
 
+    const config = @import("config");
+
     logger.info(
         \\Kernel allocator initialized!
     , .{});
 
-    Day9.solveDay9() catch {
-        @panic("error while solving");
-    };
+    switch (config.day) {
+        1 => Day1.solveDay1() catch
+            @panic("error while solving day 1"),
+        9 => Day9.solveDay9() catch
+            @panic("error while solving day 9"),
+        10 => Day10.solveDay10() catch
+            @panic("error while solving day 10"),
+        11 => Day11.solveDay11(kalloc) catch
+            @panic("error while solving day 11"),
+        else => @compileError("invalid argument"),
+    }
 
     hang();
 }

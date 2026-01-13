@@ -1,27 +1,38 @@
-# Requirements
-
-You can use `nix-shell shell.nix` to install all the requirements
-
 # Reproduce
 
 To run the bluespec designs on the tiny examples you can use the command:
 
 ```bash
+git clone --recursive https://github.com/RemyCiterin/AdventOfFPGA.git
+cd AdventOfFPGA
+nix-shell
+mkdir build rtl bsim
 make bsim DAY=<insert a number, I support 1,9,10,11> USE_PERSONAL_INPUT=false
 ```
 
-or
+you can use this command instead to use my personal puzzle input:
 
 ```bash
 make bsim DAY=<insert a number, I support 1,9,10,11>
 ```
 
-to use my personal puzzle input instead.
-
-You can also use the following command to run the design on a ULX3S FPGA board:
+Or this one to run the design on a ULX3S FPGA board:
 
 ```bash
 make compile yosys nextpnr ecppack prog_t DAY=<insert a number, I support 1,9,10,11>
+```
+
+Then to run the experiments on DOoOM, you first need to generate the simulator using:
+```bash
+mkdir DOoOM/build DOoOM/rtl DOoOM/bsim
+make dooom
+make -C elf_to_hex elf_to_hex
+```
+
+Then you can run the simulator using the following command:
+
+```bash
+make run_dooom DAY=<insert number> USE_PERSONAL_INPUT=<insert boolean>
 ```
 
 # Day 1
