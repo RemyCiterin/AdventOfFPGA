@@ -149,23 +149,30 @@ module mkSolveDay11#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   // ones
   Reg#(Ascii) char1 <- mkReg(?);
   Reg#(Ascii) char2 <- mkReg(?);
+  Reg#(Bool) reach_eof <- mkReg(False);
 
   function Stmt getName(Reg#(Name) r) = seq
     action
       let x <- receive.get();
+      if (x == charToAscii("\n")) begin
+        $display("reach eof");
+        reach_eof <= True;
+      end
       char1 <= x;
     endaction
 
-    action
-      let x <- receive.get();
-      char2 <= x;
-    endaction
+    if (!reach_eof) seq
+      action
+        let x <- receive.get();
+        char2 <= x;
+      endaction
 
-    action
-      let a = charToAscii("a");
-      let char3 <- receive.get();
-      r <= vec(truncate(char1-a), truncate(char2-a), truncate(char3-a));
-    endaction
+      action
+        let a = charToAscii("a");
+        let char3 <- receive.get();
+        r <= vec(truncate(char1-a), truncate(char2-a), truncate(char3-a));
+      endaction
+    endseq
   endseq;
 
   Reg#(Name) node1 <- mkReg(?);
@@ -191,37 +198,39 @@ module mkSolveDay11#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
     $display("finish to initialize the nodes at cycle: %d", cycle);
 
     continue0 <= True;
-    while (continue0) seq
+    while (continue0 && !reach_eof) seq
       length <= 0;
       getName(asReg(node1));
 
-      // Ignore the ":"
-      action let _ <- receive.get(); endaction
+      if (!reach_eof) seq
+        // Ignore the ":"
+        action let _ <- receive.get(); endaction
 
-      // Ignore the " "
-      action let _ <- receive.get(); endaction
+        // Ignore the " "
+        action let _ <- receive.get(); endaction
 
-      continue1 <= True;
+        continue1 <= True;
 
-      while (continue1) seq
-        getName(asReg(node2));
+        while (continue1) seq
+          getName(asReg(node2));
 
-        action
-          edges.put(True, next_edge, node2);
-          length <= length + 1;
-          next_edge <= next_edge + 1;
+          action
+            edges.put(True, next_edge, node2);
+            length <= length + 1;
+            next_edge <= next_edge + 1;
 
-          let x <- receive.get();
-          if (x == charToAscii("\n")) continue1 <= False;
-          if (x == 0 || x == charToAscii("#")) begin
-            continue1 <= False;
-            continue0 <= False;
-          end
-        endaction
+            let x <- receive.get();
+            if (x == charToAscii("\n")) continue1 <= False;
+            if (x == 0) begin
+              continue1 <= False;
+              continue0 <= False;
+            end
+          endaction
+        endseq
+
+        nodes.put(True, node1,
+          NodeEntry{index: next_edge - length, length: length});
       endseq
-
-      nodes.put(True, node1,
-        NodeEntry{index: next_edge - length, length: length});
     endseq
 
     $display("finish to parse the inputs at cycle: %d", cycle);
