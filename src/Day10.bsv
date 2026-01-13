@@ -386,7 +386,10 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
     replicateM(mkLightsSolver);
   Vector#(NumLightSolver, Reg#(Bool)) light_solvers_ready <- replicateM(mkReg(True));
 
+  Reg#(Bool) joltage_solver_ready <- mkReg(True);
   JoltageSolver joltageSolver <- mkJoltageSolver;
+
+  let printer <- mkResultPrinter(transmit);
 
   Bit#(TLog#(NumLightSolver)) next_solver = 0;
   for (Integer i=0; i < valueOf(NumLightSolver); i = i + 1) begin
@@ -408,22 +411,23 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
       light_solvers_ready[i] <= True;
       let ret <- light_solvers[i].response.get;
       $display("increment result to %d at cycle %d", result + ret, cycle);
-      transmit.put(ret[7:0]);
       result <= result + ret;
     endrule
   end
 
   rule add_joltage_result;
+    joltage_solver_ready <= True;
     let ret <- joltageSolver.getResult;
     joltageResult <= joltageResult + ret;
     $display("current solution for part 2: %d", joltageResult + ret);
-    transmit.put(ret[7:0]);
   endrule
 
   Reg#(Machine) num_machine <- mkReg(?);
 
+  Reg#(Bool) reach_eof <- mkReg(False);
+
   let stmt = seq
-    while (True) seq
+    while (!reach_eof) seq
       // Parse target pattern
       action
         num_machine <= 0;
@@ -440,68 +444,87 @@ module mkSolveDay10#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
 
         if (ascii == squareClose) continue0 <= False;
         if (ascii == fullCell) target <= target | (1 << pos);
+
+        if (ascii == charToAscii("\n") || ascii == 0) begin
+          continue0 <= False;
+          reach_eof <= True;
+        end
       endaction
 
-      action let _ <- receive.get(); endaction
-
-      action
-        let ascii <- receive.get();
-        continue0 <= ascii == parentOpen;
-        num_patterns <= 0;
-      endaction
-
-      while (continue0) seq
-        action
-          continue1 <= True;
-          patterns[num_patterns] <= 0;
-        endaction
-
-        while (continue1) seq
-          parseInt.request.put(?);
-
-          action
-            match {.ascii, .idx} <- parseInt.response.get();
-            patterns[num_patterns] <= patterns[num_patterns] | (1 << idx);
-            joltageSolver.setButton(truncate(idx), truncate(num_patterns));
-            continue1 <= ascii == comma;
-          endaction
-        endseq
+      if (!reach_eof) seq
 
         action let _ <- receive.get(); endaction
 
         action
           let ascii <- receive.get();
           continue0 <= ascii == parentOpen;
-          num_patterns <= num_patterns + 1;
+          num_patterns <= 0;
         endaction
-      endseq
 
-      action
-        light_solvers_ready[next_solver] <= False;
-        light_solvers[next_solver].request.put(SolverInput{
-          num_patterns: num_patterns,
-          patterns: patterns,
-          target: target
-        });
-      endaction
+        while (continue0) seq
+          action
+            continue1 <= True;
+            patterns[num_patterns] <= 0;
+          endaction
 
-      continue0 <= True;
-      while (continue0) seq
-        parseInt.request.put(?);
+          while (continue1) seq
+            parseInt.request.put(?);
+
+            action
+              match {.ascii, .idx} <- parseInt.response.get();
+              patterns[num_patterns] <= patterns[num_patterns] | (1 << idx);
+              joltageSolver.setButton(truncate(idx), truncate(num_patterns));
+              continue1 <= ascii == comma;
+            endaction
+          endseq
+
+          action let _ <- receive.get(); endaction
+
+          action
+            let ascii <- receive.get();
+            continue0 <= ascii == parentOpen;
+            num_patterns <= num_patterns + 1;
+          endaction
+        endseq
 
         action
-          match {.ascii, .idx} <- parseInt.response.get;
-          joltageSolver.setJoltage(num_machine, unpack(truncate(idx)));
-          num_machine <= num_machine + 1;
-          continue0 <= ascii == comma;
+          light_solvers_ready[next_solver] <= False;
+          light_solvers[next_solver].request.put(SolverInput{
+            num_patterns: num_patterns,
+            patterns: patterns,
+            target: target
+          });
+        endaction
+
+        continue0 <= True;
+        while (continue0) seq
+          parseInt.request.put(?);
+
+          action
+            match {.ascii, .idx} <- parseInt.response.get;
+            joltageSolver.setJoltage(num_machine, unpack(truncate(idx)));
+            num_machine <= num_machine + 1;
+            continue0 <= ascii == comma;
+          endaction
+        endseq
+
+        action
+          joltageSolver.call;
+          let _ <- receive.get();
+          joltage_solver_ready <= False;
         endaction
       endseq
-
-      action
-        joltageSolver.call;
-        let _ <- receive.get();
-      endaction
     endseq
+
+    while (readVReg(light_solvers_ready) != replicate(True)) noAction;
+
+    printer.put(zeroExtend(result));
+
+    while (!joltage_solver_ready) noAction;
+
+    printer.put(zeroExtend(joltageResult));
+
+    while (True) noAction;
   endseq;
 
   mkAutoFSM(stmt);

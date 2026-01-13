@@ -23,6 +23,8 @@ import Day9::*;
 import Day10::*;
 import Day11::*;
 
+// `define MkSolve mkSolveDay`DAY
+
 interface Soc_Ifc;
   (* always_ready, always_enabled *)
   method Bit#(8) led;
@@ -40,7 +42,7 @@ module mkSOC(Soc_Ifc);
   RxUART rx_uart <- mkRxUART(217);
   Reg#(Bit#(8)) led_state <- mkReg(0);
 
-  mkSolveDay10(
+  `SOLVER (
     interface Put;
       method Action put(Ascii x);
         tx_uart.put(x);
@@ -48,8 +50,10 @@ module mkSOC(Soc_Ifc);
     endinterface,
     interface Get;
       method ActionValue#(Ascii) get if (rx_uart.valid);
+        let data = rx_uart.data == 13 ? 10 : rx_uart.data;
+        tx_uart.put(data);
         rx_uart.ack();
-        return rx_uart.data;
+        return data;
       endmethod
     endinterface
   );
@@ -62,7 +66,7 @@ endmodule
 
 (* synthesize *)
 module mkSOC_SIM(Empty);
-  mkSolveDay10(
+  `SOLVER (
     interface Put;
       method Action put(Ascii x);
         $write("%c", x);

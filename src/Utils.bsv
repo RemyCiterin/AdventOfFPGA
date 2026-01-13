@@ -1,6 +1,7 @@
 import ClientServer::*;
 import BRAMCore::*;
 import StmtFSM::*;
+import Vector::*;
 import GetPut::*;
 import Fifo::*;
 import Ehr::*;
@@ -65,6 +66,79 @@ module mkStringPrinter#(String str, Put#(Ascii) transmit) (Server#(void,void));
       return ?;
     endmethod
   endinterface
+endmodule
+
+typedef enum {
+  Idle,
+  Division,
+  Printing,
+  PrintBracket,
+  PrintSpace,
+  PrintEndline
+} ResultPrinterState deriving(Bits, Eq);
+
+module mkResultPrinter#(Put#(Ascii) transmit) (Put#(Bit#(64)));
+  Reg#(Bit#(64)) index <- mkReg(0);
+  Reg#(Bit#(64)) num <- mkReg(0);
+  Reg#(Bit#(64)) div <- mkReg(0);
+  Reg#(Bit#(64)) rem <- mkReg(0);
+
+  Vector#(16, Reg#(Bit#(8))) buffer <- replicateM(mkReg(0));
+  Reg#(Bit#(5)) num_digits <- mkReg(0);
+
+  Reg#(ResultPrinterState) state <- mkReg(Idle);
+
+  rule print_bracket if (state == PrintBracket);
+    transmit.put(charToAscii(">"));
+    state <= PrintSpace;
+  endrule
+
+  rule print_space if (state == PrintSpace);
+    transmit.put(charToAscii(" "));
+    state <= Division;
+  endrule
+
+  rule div_step if (index != 0);
+    let newRem = (num & index) != 0 ? (rem << 1) | 1 : rem << 1;
+
+    if (newRem >= 10) begin
+      newRem = newRem - 10;
+      div <= div | index;
+    end
+
+    rem <= newRem;
+    index <= index >> 1;
+  endrule
+
+  rule new_div if (state == Division && index == 0);
+    index <= 1 << 63;
+    num <= div;
+    div <= 0;
+    rem <= 0;
+
+    if (div == 0) state <= Printing;
+    buffer[num_digits] <= truncate(rem);
+    num_digits <= num_digits + 1;
+  endrule
+
+  rule print_digit if (state == Printing);
+    transmit.put(buffer[num_digits - 1] + charToAscii("0"));
+
+    num_digits <= num_digits - 1;
+    if (num_digits == 1) state <= PrintEndline;
+  endrule
+
+  rule print_endline if (state == PrintEndline);
+    transmit.put(charToAscii("\n"));
+    state <= Idle;
+  endrule
+
+  method Action put(Bit#(64) number) if (state == Idle);
+    index <= 1 << 63;
+    num <= number;
+
+    state <= PrintBracket;
+  endmethod
 endmodule
 
 

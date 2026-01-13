@@ -8,7 +8,15 @@ TOP = src/Soc.bsv
 BSIM_MODULE = mkSOC_SIM
 BUILD_MODULE = mkSOC
 
-INPUT_FILE = day1.txt
+DAY = 1
+
+USE_PERSONAL_INPUT = true
+
+ifeq ($(USE_PERSONAL_INPUT),true)
+INPUT_FILE = day$(DAY).txt
+else
+INPUT_FILE = example$(DAY).txt
+endif
 
 LIB = \
 			$(BLUESPECDIR)/Verilog/SizedFIFO.v \
@@ -42,7 +50,8 @@ BSIM_FLAGS =  -bdir $(BSIM) -vdir $(BSIM) -simdir $(BSIM) -info-dir $(BSIM) \
 							-fdir $(BSIM) -l pthread -D BSIM -l SDL2
 
 BSC_FLAGS = -keep-fires -aggressive-conditions \
-						-check-assert -no-warn-action-shadowing
+						-check-assert -no-warn-action-shadowing \
+						-D SOLVER=mkSolveDay$(DAY)
 
 BUILD_FLAGS = -show-schedule -sched-dot -bdir $(BUILD) -vdir $(RTL) \
 							-simdir $(BUILD) -info-dir $(BUILD) -fdir $(BUILD)

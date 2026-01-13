@@ -56,6 +56,8 @@ module mkSolveDay9#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   BRAM_PORT#(Addr, VEdge) vedges <- mkBRAMCore1(1024, False);
   BRAM_PORT#(Addr, HEdge) hedges <- mkBRAMCore1(1024, False);
 
+  let printer <- mkResultPrinter(transmit);
+
   Reg#(Bit#(32)) cycle <- mkReg(0);
   rule incr_cycle; cycle <= cycle+1; endrule
 
@@ -220,9 +222,11 @@ module mkSolveDay9#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
       endaction
     endseq
 
-    $display("part1: %d", best_area_part1);
-    $display("part2: %d", best_area_part2);
-    $display("cycles: %d", cycle);
+    $display("cycles: %d part1: %d part2: %d", cycle, best_area_part1, best_area_part2);
+    printer.put(zeroExtend(best_area_part1));
+    printer.put(zeroExtend(best_area_part2));
+
+    while (True) noAction;
 
   endseq);
 endmodule

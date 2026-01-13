@@ -62,6 +62,8 @@ module mkSolveDay11#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
   Reg#(Index) index <- mkReg(?);
   Reg#(Name) parent <- mkReg(?);
 
+  let printer <- mkResultPrinter(transmit);
+
   Name source = vec(
     truncate(charToAscii("y") - charToAscii("a")),
     truncate(charToAscii("o") - charToAscii("a")),
@@ -136,7 +138,7 @@ module mkSolveDay11#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
     position.put(False, sink, ?);
     paths_from_source.put(False, position.read, ?);
     $display("paths to out: %d", paths_from_source.read);
-    transmit.put(truncate(paths_from_source.read));
+    printer.put(zeroExtend(paths_from_source.read));
   endseq;
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -231,6 +233,8 @@ module mkSolveDay11#(Put#(Ascii) transmit, Get#(Ascii) receive) (Empty);
     dynamic;
 
     $display("finish the dynamic programming at cycle: %d", cycle);
+
+    while (True) noAction;
 
   endseq;
 

@@ -1,5 +1,30 @@
+# Requirements
+
+You can use `nix-shell shell.nix` to install all the requirements
+
+# Reproduce
+
+To run the bluespec designs on the tiny examples you can use the command:
+
+```bash
+make bsim DAY=<insert a number, I support 1,9,10,11> USE_PERSONAL_INPUT=false
+```
+
+or
+
+```bash
+make bsim DAY=<insert a number, I support 1,9,10,11>
+```
+
+to use my personal puzzle input instead.
 
 # Day 1
+
+
+
+https://github.com/user-attachments/assets/ea64b168-f5a7-44a6-9a84-dac7d63e52d0
+
+
 
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
