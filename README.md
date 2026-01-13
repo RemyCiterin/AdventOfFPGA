@@ -31,6 +31,12 @@ write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
 # Day 9 (part 1 and 2)
 
+
+
+https://github.com/user-attachments/assets/21878be7-3cbd-4320-af5c-8413102e29b3
+
+
+
 For this day I solved both parts using some kind of brute force algorithms. In the first part I just
 iterate over all the possible boxes and save the best area I found. And in the second part I
 additionally check if their is an intersection between the interior of the box and an edge.
