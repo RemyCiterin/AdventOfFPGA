@@ -10,7 +10,8 @@ mkdir build rtl bsim
 make bsim DAY=<insert a number, I support 1,9,10,11> USE_PERSONAL_INPUT=false
 ```
 
-you can use this command instead to use my personal puzzle input:
+you can use this command instead to use my personal puzzle input (this can take more as this
+input is typically hundreds of times bigger):
 
 ```bash
 make bsim DAY=<insert a number, I support 1,9,10,11>
@@ -42,7 +43,7 @@ https://github.com/user-attachments/assets/ea64b168-f5a7-44a6-9a84-dac7d63e52d0
 For the first day I directly used the DSL in bluespec to write finite state machines, this allow to
 write the solution using sequence of actions, `if-then-else` and `while` blocks.
 
-# Day 9 (part 1 and 2)
+# Day 9
 
 https://github.com/user-attachments/assets/21878be7-3cbd-4320-af5c-8413102e29b3
 
@@ -294,7 +295,7 @@ because the initial problem give us some bounds about the assignations: if a but
 joltage of an engine, then it must be assigned to a value smaller than the required joltage of the
 engine.
 
-# Day 11 (part 1 and 2)
+# Day 11
 
 https://github.com/user-attachments/assets/6ae397db-db49-4fed-8fda-ec206571f007
 
