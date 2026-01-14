@@ -57,6 +57,8 @@ finite-state-machines DSL in Bluespec.
 
 # Day 10
 
+https://github.com/user-attachments/assets/98cbe720-19a4-48bc-b108-18f845fe5199
+
 ## Part 1
 
 My way of solving this problem is by doing a brute-force search over the buttons to find the
