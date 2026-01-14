@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/17ae6d64-a715-4fe4-88da-031ba6f7ec72
+
 # Reproduce
 
 To run the bluespec designs on the tiny examples you can use the command:
